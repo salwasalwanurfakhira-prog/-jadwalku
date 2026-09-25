@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JadwalKu - Login & Jadwal</title>
+    
+    <!-- Menghubungkan file HTML ke file CSS terpisah -->
+    <link rel="stylesheet" href="style.css/style.css">
+
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- Halaman Login -->
+        <div id="sectionLogin">
+            <h2>Login JadwalKu 🔐</h2>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="loginUser" placeholder="Masukkan username">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPass" placeholder="Masukkan password">
+            </div>
+            <button onclick="prosesLogin()">Masuk</button>
+            <div class="link-switch">
+                Belum punya akun? <a onclick="tukarForm('register')">Daftar di sini</a>
+            </div>
+        </div>
+
+        <!-- Halaman Register (Daftar Akun) -->
+        <div id="sectionRegister" class="hidden">
+            <h2>Daftar Akun 📝</h2>
+            <div class="form-group">
+                <label>Buat Username</label>
+                <input type="text" id="regUser" placeholder="Username baru">
+            </div>
+            <div class="form-group">
+                <label>Buat Password</label>
+                <input type="password" id="regPass" placeholder="Password baru">
+            </div>
+            <button onclick="prosesRegister()">Daftar Sekarang</button>
+            <div class="link-switch">
+                Sudah punya akun? <a onclick="tukarForm('login')">Login di sini</a>
+            </div>
+        </div>
+
+        <!-- Halaman Utama Aplikasi JadwalKu -->
+        <div id="sectionApp" class="hidden">
+            <h2>JadwalKu 📅</h2>
+            <p id="salamUser" style="text-align:center; color:#555; font-size:14px; margin-top:-10px;"></p>
+            
+            <div class="form-group">
+                <label>Nama Kegiatan</label>
+                <input type="text" id="namaKegiatan" placeholder="Contoh: Kuliah / Rapat">
+            </div>
+            <div class="form-group">
+                <label>Waktu Alarm</label>
+                <input type="time" id="waktuAlarm">
+            </div>
+            <button onclick="tambahJadwal()">Simpan & Pasang Alarm</button>
+
+            <div style="margin-top: 25px;">
+                <h3 style="font-size: 16px; border-bottom: 2px solid #eee; padding-bottom: 8px;">Daftar Alarm Aktif:</h3>
+                <div id="containerJadwal">
+                    <div class="kosong">Belum ada jadwal yang disimpan.</div>
+                </div>
+            </div>
+
+            <button class="btn-logout" onclick="logout()">Keluar Akun (Logout)</button>
+        </div>
+
+    </div>
+
+    <!-- Audio Alarm -->
+    <audio id="suaraAlarm" src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" preload="auto"></audio>
+
+    <!-- JavaScript Logika & Alarm -->
+    <script>
+        window.onload = function() {
+            const userAktif = localStorage.getItem('userAktif');
+            if(userAktif) {
+                bukaAplikasi(userAktif);
+            }
+        };
+
+        function tukarForm(tujuan) {
+            if(tujuan === 'register') {
+                document.getElementById('sectionLogin').classList.add('hidden');
+                document.getElementById('sectionRegister').classList.remove('hidden');
+            } else {
+                document.getElementById('sectionRegister').classList.add('hidden');
+                document.getElementById('sectionLogin').classList.remove('hidden');
+            }
+        }
+
+        function prosesRegister() {
+            const user = document.getElementById('regUser').value;
+            const pass = document.getElementById('regPass').value;
+
+            if(!user || !pass) {
+                alert("Username dan password tidak boleh kosong!");
+                return;
+            }
+
+            localStorage.setItem('db_user', user);
+            localStorage.setItem('db_pass', pass);
+            alert("Pendaftaran berhasil! Silakan login.");
+            tukarForm('login');
+        }
+
+        function prosesLogin() {
+            const userIput = document.getElementById('loginUser').value;
+            const passInput = document.getElementById('loginPass').value;
+
+            const userTerdaftar = localStorage.getItem('db_user');
+            const passTerdaftar = localStorage.getItem('db_pass');
+
+            if(!userTerdaftar) {
+                alert("Belum ada akun terdaftar. Silakan daftar dulu!");
+                return;
+            }
+
+            if(userIput === userTerdaftar && passInput === passTerdaftar) {
+                localStorage.setItem('userAktif', userIput);
+                bukaAplikasi(userIput);
+            } else {
+                alert("Username atau password salah!");
+            }
+        }
+
+        function bukaAplikasi(username) {
+            document.getElementById('sectionLogin').classList.add('hidden');
+            document.getElementById('sectionRegister').classList.add('hidden');
+            document.getElementById('sectionApp').classList.remove('hidden');
+            document.getElementById('salamUser').innerText = `Halo, ${username}! 👋`;
+            tampilkanJadwal();
+        }
+
+        function logout() {
+            localStorage.removeItem('userAktif');
+            location.reload();
+        }
+
+        let daftarJadwal = JSON.parse(localStorage.getItem('dataJadwal')) || [];
+
+        function tambahJadwal() {
+            const nama = document.getElementById('namaKegiatan').value;
+            const waktu = document.getElementById('waktuAlarm').value;
+
+            if(!nama || !waktu) {
+                alert("Mohon isi nama kegiatan dan waktunya!");
+                return;
+            }
+
+            daftarJadwal.push({ nama, waktu });
+            simpanJadwalLokal();
+            
+            document.getElementById('namaKegiatan').value = '';
+            document.getElementById('waktuAlarm').value = '';
+            tampilkanJadwal();
+        }
+
+        function tampilkanJadwal() {
+            const container = document.getElementById('containerJadwal');
+            if(daftarJadwal.length === 0) {
+                container.innerHTML = '<div class="kosong">Belum ada jadwal yang disimpan.</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            daftarJadwal.forEach((item, index) => {
+                container.innerHTML += `
+                    <div class="item-jadwal">
+                        <div>
+                            <span class="item-waktu">⏰ ${item.waktu}</span>
+                            <span class="item-nama">${item.nama}</span>
+                        </div>
+                        <button class="btn-hapus" onclick="hapusJadwal(${index})">Hapus</button>
+                    </div>
+                `;
+            });
+        }
+
+        function hapusJadwal(index) {
+            daftarJadwal.splice(index, 1);
+            simpanJadwalLokal();
+            tampilkanJadwal();
+        }
+
+        function simpanJadwalLokal() {
+            localStorage.setItem('dataJadwal', JSON.stringify(daftarJadwal));
+        }
+
+        setInterval(() => {
+            const sekarang = new Date();
+            const jam = String(sekarang.getHours()).padStart(2, '0');
+            const menit = String(sekarang.getMinutes()).padStart(2, '0');
+            const waktuSekarang = `${jam}:${menit}`;
+
+            daftarJadwal.forEach(item => {
+                if(item.waktu === waktuSekarang) {
+                    document.getElementById('suaraAlarm').play();
+                    alert(`Waktunya: ${item.nama}! ⏰`);
+                }
+            });
+        }, 1000);
+    </script>
+
+</body>
+</html>
